@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
+  BarChart3,
   CheckCircle2,
   ChevronRight,
   Clock3,
@@ -34,6 +35,11 @@ import {
 } from "./domain";
 import { flowProgress, upsertFlowAnswer, type FlowAnswer } from "./flows";
 import { acknowledgeIntake, intakeChanges, type IntakeProfile } from "./intake";
+import {
+  percentageChange,
+  summarizePractice,
+  type VisitSignal,
+} from "./insights";
 import { moneyTotal, recordRefund, type MoneyEntry } from "./money";
 import {
   applyMessageTemplate,
@@ -61,6 +67,7 @@ const nav = [
   "Money",
   "Flows",
   "Store",
+  "Insights",
   "Practice",
 ];
 const people = ["Maya Rivers", "Jon Bell", "Alex Morgan", "Sam Lee"];
@@ -325,6 +332,7 @@ function Route({
   if (view === "Money") return <Money />;
   if (view === "Flows") return <Flows />;
   if (view === "Store") return <Store />;
+  if (view === "Insights") return <Insights />;
   return <Practice />;
 }
 function Shell({
@@ -2324,6 +2332,142 @@ function Store() {
             </div>
           )}
         </aside>
+      </div>
+    </Shell>
+  );
+}
+const weeklyVisitSignals: VisitSignal[] = [
+  ...Array.from({ length: 11 }, (_, index) => ({
+    id: `restore-${index}`,
+    clientId: `EMP-${1024 + (index % 7)}`,
+    service: "Restore Flow",
+    status: "completed" as const,
+    revenueCents: 12500,
+  })),
+  ...Array.from({ length: 4 }, (_, index) => ({
+    id: `community-${index}`,
+    clientId: `CC-${index % 3}`,
+    service: "Community Care",
+    status: "completed" as const,
+    revenueCents: 10500,
+  })),
+  ...Array.from({ length: 2 }, (_, index) => ({
+    id: `reset-${index}`,
+    clientId: `EMP-${1035 + index}`,
+    service: "Reset Session",
+    status: "completed" as const,
+    revenueCents: 8500,
+  })),
+  {
+    id: "cancelled-1",
+    clientId: "EMP-1040",
+    service: "Restore Flow",
+    status: "cancelled" as const,
+    revenueCents: 12500,
+  },
+  {
+    id: "scheduled-1",
+    clientId: "EMP-1041",
+    service: "Restore Flow",
+    status: "scheduled" as const,
+    revenueCents: 12500,
+  },
+];
+const monthlyVisitSignals: VisitSignal[] = [
+  ...weeklyVisitSignals,
+  ...Array.from({ length: 39 }, (_, index) => ({
+    id: `month-${index}`,
+    clientId: `EMP-${1024 + (index % 22)}`,
+    service: index % 5 === 0 ? "Community Care" : index % 7 === 0 ? "Reset Session" : "Restore Flow",
+    status: "completed" as const,
+    revenueCents: index % 5 === 0 ? 10500 : index % 7 === 0 ? 8500 : 12500,
+  })),
+];
+function Insights() {
+  const [period, setPeriod] = useSessionState<"7" | "30">("insights:period", "7");
+  const summary = summarizePractice(
+    period === "7" ? weeklyVisitSignals : monthlyVisitSignals,
+    period === "7" ? 22 : 78,
+  );
+  const revenueBaseline = period === "7" ? 188500 : 647000;
+  const revenueChange = percentageChange(summary.revenueCents, revenueBaseline);
+  const daily = period === "7" ? [2, 4, 3, 4, 3, 1, 0] : [12, 15, 14, 17, 13, 11, 10];
+  const maxDay = Math.max(...daily);
+  const money = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
+  return (
+    <Shell
+      tag="INSIGHTS · SYNTHETIC OPERATIONS"
+      title="See the shape of the practice"
+      copy="Review minimum-necessary operating signals without exposing client names, clinical narrative, or individual payment details."
+    >
+      <div className="insight-toolbar">
+        <div>
+          <small>REPORTING WINDOW</small>
+          <b>{period === "7" ? "July 16–22" : "June 23–July 22"}</b>
+        </div>
+        <div className="period-toggle" role="group" aria-label="Insight period">
+          <button className={period === "7" ? "selected" : ""} onClick={() => setPeriod("7")}>7 days</button>
+          <button className={period === "30" ? "selected" : ""} onClick={() => setPeriod("30")}>30 days</button>
+        </div>
+      </div>
+      <section className="insight-metrics" aria-label="Practice summary">
+        <article className="card">
+          <small>COLLECTED REVENUE</small>
+          <b>{money.format(summary.revenueCents / 100)}</b>
+          <span className={revenueChange !== null && revenueChange >= 0 ? "positive" : "neutral"}>
+            {revenueChange === null ? "New baseline" : `${revenueChange >= 0 ? "+" : ""}${revenueChange}%`} vs prior period
+          </span>
+        </article>
+        <article className="card">
+          <small>COMPLETED VISITS</small>
+          <b>{summary.completed}</b>
+          <span>{summary.scheduled} upcoming · {summary.cancelled} cancelled</span>
+        </article>
+        <article className="card">
+          <small>UTILIZATION</small>
+          <b>{summary.utilizationPercent}%</b>
+          <span>Completed visits / available slots</span>
+        </article>
+        <article className="card">
+          <small>ACTIVE CLIENTS</small>
+          <b>{summary.uniqueClients}</b>
+          <span>{summary.returningClients} returning this period</span>
+        </article>
+      </section>
+      <div className="insight-grid">
+        <section className="card visit-chart">
+          <div className="section-heading">
+            <div><small>VISIT RHYTHM</small><h3>Completed care</h3></div>
+            <span>{summary.completed} visits</span>
+          </div>
+          <div className="bar-chart" role="img" aria-label={`Daily completed visits: ${daily.join(", ")}`}>
+            {daily.map((count, index) => (
+              <div key={index}>
+                <span>{count}</span>
+                <i style={{ height: `${Math.max(5, (count / maxDay) * 100)}%` }} />
+                <small>{["W", "T", "F", "S", "S", "M", "T"][index]}</small>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="card service-mix">
+          <div className="section-heading">
+            <div><small>SERVICE MIX</small><h3>Care delivered</h3></div>
+            <BarChart3 size={21} />
+          </div>
+          {summary.serviceMix.map((service) => (
+            <div className="mix-row" key={service.service}>
+              <span><b>{service.service}</b><small>{service.visits} visits</small></span>
+              <div className="mix-track" aria-label={`${service.service}: ${service.percent}%`}><i style={{ width: `${service.percent}%` }} /></div>
+              <b>{service.percent}%</b>
+            </div>
+          ))}
+          <p className="insight-note"><ShieldCheck size={14} /> Aggregated only; no individual client or clinical detail.</p>
+        </section>
       </div>
     </Shell>
   );
