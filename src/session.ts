@@ -23,6 +23,10 @@ export function clearEmpressSession(
   keys.forEach((key) => storage.removeItem(key));
 }
 
+export function writeSessionValue<T>(key: string, value: T) {
+  window.sessionStorage.setItem(sessionPrefix + key, JSON.stringify(value));
+}
+
 export function useSessionState<T>(key: string, initial: T | (() => T)) {
   const storageKey = sessionPrefix + key;
   const fallback = () =>

@@ -251,6 +251,7 @@ button:disabled { cursor: not-allowed; }
 .task-row.done { opacity: .58; }
 .task-row.done > button { background: var(--green) !important; }
 .task-row.done b { text-decoration: line-through; }
+.queue-link { display: flex; width: 100%; justify-content: center; align-items: center; gap: 7px; margin-top: 10px; color: var(--green); }
 .all-clear { display: flex; gap: 9px; align-items: center; padding: 12px; margin-top: 10px; border-radius: 9px; background: #e5eee9; color: var(--green); }
 .all-clear span { display: grid; font-size: 11px; }
 .clients-layout { display: grid; grid-template-columns: 330px 1fr; gap: 20px; align-items: start; }
@@ -271,6 +272,8 @@ button:disabled { cursor: not-allowed; }
 .client-profile-head h3 { margin: 0; }
 .client-profile-head small, .client-profile-head span { color: var(--muted); }
 .client-profile-head .primary { width: auto; }
+.client-actions { display: flex; gap: 8px; align-items: center; }
+.client-actions > button { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .client-tabs { display: flex; padding: 0 22px; border-bottom: 1px solid var(--line); }
 .client-tabs button { position: relative; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; padding: 12px 16px; color: var(--muted); }
 .client-tabs button.selected { border-color: var(--green); color: var(--green); font-weight: 700; }
@@ -379,6 +382,8 @@ button:disabled { cursor: not-allowed; }
   .store-product h3, .store-product p { min-height: 0; }
   .client-profile-head { grid-template-columns: auto 1fr; }
   .client-profile-head .primary { grid-column: 1 / -1; width: 100%; }
+  .client-actions { grid-column: 1 / -1; }
+  .client-actions > button { flex: 1; justify-content: center; }
   .client-metrics { grid-template-columns: 1fr; }
   .client-metrics > div { border-right: 0; border-bottom: 1px solid var(--line); }
   .preference-panel dl { grid-template-columns: auto 1fr; }

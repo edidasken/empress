@@ -44,7 +44,11 @@ import {
 } from "./messages";
 import { searchForView, viewFromSearch } from "./routing";
 import { resourceConflicts, type ScheduleBlock } from "./schedule";
-import { clearEmpressSession, useSessionState } from "./session";
+import {
+  clearEmpressSession,
+  useSessionState,
+  writeSessionValue,
+} from "./session";
 import "./styles.css";
 import "./enhancements.css";
 const nav = [
@@ -291,10 +295,30 @@ function Route({
   onGo: (view: string) => void;
 }) {
   if (view === "Today")
-    return <Today privacy={privacy} onPrepare={() => onGo("Care")} />;
+    return (
+      <Today
+        privacy={privacy}
+        onPrepare={() => onGo("Care")}
+        onMessage={() => onGo("Messages")}
+      />
+    );
   if (view === "Calendar") return <Calendar privacy={privacy} />;
   if (view === "Clients")
-    return <Clients privacy={privacy} onPrepare={() => onGo("Care")} />;
+    return (
+      <Clients
+        privacy={privacy}
+        onPrepare={() => onGo("Care")}
+        onMessage={(index) => {
+          writeSessionValue("messages:selected-client", index);
+          writeSessionValue(
+            "messages:channel",
+            messageClients[index].consent.sms ? "sms" : "email",
+          );
+          writeSessionValue("messages:draft", "");
+          onGo("Messages");
+        }}
+      />
+    );
   if (view === "Messages") return <Messages privacy={privacy} />;
   if (view === "Care") return <Care privacy={privacy} />;
   if (view === "Community Care") return <Community />;
@@ -332,9 +356,11 @@ function Shell({
 function Today({
   privacy,
   onPrepare,
+  onMessage,
 }: {
   privacy: boolean;
   onPrepare: () => void;
+  onMessage: () => void;
 }) {
   const [visitStatus, setVisitStatus] = useSessionState<Status>(
     "today:visit-status",
@@ -443,6 +469,9 @@ function Today({
               </span>
             </div>
           ))}
+          <button className="queue-link" onClick={onMessage}>
+            <Send size={14} /> Open client communication queue
+          </button>
           {!remaining && (
             <div className="all-clear">
               <CheckCircle2 />
@@ -781,9 +810,11 @@ const clientRecords = people.map((name, index) => ({
 function Clients({
   privacy,
   onPrepare,
+  onMessage,
 }: {
   privacy: boolean;
   onPrepare: () => void;
+  onMessage: (index: number) => void;
 }) {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState(0);
@@ -881,9 +912,14 @@ function Clients({
               <h3>{displayName}</h3>
               <span>Active client · Willow clinic</span>
             </div>
-            <button className="primary" onClick={onPrepare}>
-              Prepare visit <ChevronRight size={15} />
-            </button>
+            <div className="client-actions">
+              <button onClick={() => onMessage(selected)}>
+                <Send size={14} /> Message
+              </button>
+              <button className="primary" onClick={onPrepare}>
+                Prepare visit <ChevronRight size={15} />
+              </button>
+            </div>
           </div>
           <div
             className="client-tabs"

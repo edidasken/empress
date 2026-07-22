@@ -3,6 +3,7 @@ import {
   clearEmpressSession,
   readSessionValue,
   sessionPrefix,
+  writeSessionValue,
 } from "../src/session";
 
 describe("synthetic session persistence", () => {
@@ -24,5 +25,12 @@ describe("synthetic session persistence", () => {
     clearEmpressSession();
     expect(sessionStorage.getItem(`${sessionPrefix}today`)).toBeNull();
     expect(sessionStorage.getItem("unrelated-app")).toBe("keep");
+  });
+
+  it("writes a namespaced handoff value", () => {
+    writeSessionValue("messages:selected-client", 2);
+    expect(
+      sessionStorage.getItem(`${sessionPrefix}messages:selected-client`),
+    ).toBe("2");
   });
 });
