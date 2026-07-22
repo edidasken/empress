@@ -1046,7 +1046,7 @@ const noteLabels: Record<keyof SoapNote, { label: string; prompt: string }> = {
   plan: { label: "Plan", prompt: "Follow-up and home care" },
 };
 function Care({ privacy }: { privacy: boolean }) {
-  const [note, setNote] = useState<SoapNote>({
+  const [note, setNote] = useSessionState<SoapNote>("care:note", {
     subjective:
       "Client reported bilateral shoulder tension after a busy work week.",
     objective:
@@ -1055,13 +1055,19 @@ function Care({ privacy }: { privacy: boolean }) {
       "Client reported greater ease and demonstrated improved shoulder movement.",
     plan: "Hydrate, use gentle shoulder movement, and reassess at the next visit.",
   });
-  const [active, setActive] = useState<keyof SoapNote>("subjective");
-  const [regions, setRegions] = useState(["Left shoulder", "Right shoulder"]);
-  const [reviewing, setReviewing] = useState(false);
-  const [attested, setAttested] = useState(false);
-  const [snapshot, setSnapshot] = useState<ReturnType<
+  const [active, setActive] = useSessionState<keyof SoapNote>(
+    "care:active-section",
+    "subjective",
+  );
+  const [regions, setRegions] = useSessionState("care:regions", [
+    "Left shoulder",
+    "Right shoulder",
+  ]);
+  const [reviewing, setReviewing] = useSessionState("care:reviewing", false);
+  const [attested, setAttested] = useSessionState("care:attested", false);
+  const [snapshot, setSnapshot] = useSessionState<ReturnType<
     typeof sign<{ note: SoapNote; regions: string[] }>
-  > | null>(null);
+  > | null>("care:signed-snapshot", null);
   const missing = noteReadiness(note, regions);
   const regionOptions = [
     "Neck",
@@ -1280,14 +1286,17 @@ function Care({ privacy }: { privacy: boolean }) {
 }
 function Community() {
   const authorized = 14;
-  const [entries, setEntries] = useState([
+  const [entries, setEntries] = useSessionState("community:entries", [
     { id: "opening-balance", delta: 8 },
     { id: "visit-2026-07-15", delta: 1 },
     { id: "visit-2026-07-22", delta: 1 },
   ]);
-  const [attested, setAttested] = useState(false);
-  const [service, setService] = useState("Massage therapy · 6 visits");
-  const [exported, setExported] = useState(false);
+  const [attested, setAttested] = useSessionState("community:attested", false);
+  const [service, setService] = useSessionState(
+    "community:service",
+    "Massage therapy · 6 visits",
+  );
+  const [exported, setExported] = useSessionState("community:exported", false);
   const used = balance(entries);
   const remaining = authorized - used;
   const recordVisit = () =>
@@ -1461,11 +1470,14 @@ function Money() {
     { id: "tip-1048", kind: "tip", cents: 2000 },
     { id: "fee-1048", kind: "fee", cents: -473 },
   ];
-  const [entries, setEntries] = useState(initial);
-  const [refunding, setRefunding] = useState(false);
-  const [amount, setAmount] = useState("125.00");
-  const [reason, setReason] = useState("Client request");
-  const [receipt, setReceipt] = useState(false);
+  const [entries, setEntries] = useSessionState("money:entries", initial);
+  const [refunding, setRefunding] = useSessionState("money:refunding", false);
+  const [amount, setAmount] = useSessionState("money:refund-amount", "125.00");
+  const [reason, setReason] = useSessionState(
+    "money:refund-reason",
+    "Client request",
+  );
+  const [receipt, setReceipt] = useSessionState("money:receipt", false);
   const net = moneyTotal(entries);
   const refunded = -entries
     .filter((entry) => entry.kind === "refund")
@@ -1711,10 +1723,13 @@ const flowSteps = [
   },
 ];
 function Flows() {
-  const [active, setActive] = useState(0);
-  const [answers, setAnswers] = useState<FlowAnswer[]>([]);
-  const [reviewing, setReviewing] = useState(false);
-  const [completed, setCompleted] = useState(false);
+  const [active, setActive] = useSessionState("flows:active-step", 0);
+  const [answers, setAnswers] = useSessionState<FlowAnswer[]>(
+    "flows:answers",
+    [],
+  );
+  const [reviewing, setReviewing] = useSessionState("flows:reviewing", false);
+  const [completed, setCompleted] = useSessionState("flows:completed", false);
   const step = flowSteps[active];
   const progress = flowProgress(
     flowSteps.map((item) => item.id),
@@ -1923,8 +1938,8 @@ const products = [
   },
 ];
 function Store() {
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [ordered, setOrdered] = useState(false);
+  const [cart, setCart] = useSessionState<CartLine[]>("store:cart", []);
+  const [ordered, setOrdered] = useSessionState("store:ordered", false);
   const total = cartTotal(cart);
   const count = cart.reduce((sum, line) => sum + line.quantity, 0);
   const update = (productId: string, quantity: number) => {
@@ -2166,10 +2181,19 @@ const auditEvents: AuditEvent[] = [
   },
 ];
 function Practice() {
-  const [selected, setSelected] = useState(0);
-  const [location, setLocation] = useState("Willow clinic");
-  const [filter, setFilter] = useState<"all" | AuditEvent["category"]>("all");
-  const [selectedEvent, setSelectedEvent] = useState(auditEvents[0].id);
+  const [selected, setSelected] = useSessionState("practice:selected-role", 0);
+  const [location, setLocation] = useSessionState(
+    "practice:location",
+    "Willow clinic",
+  );
+  const [filter, setFilter] = useSessionState<"all" | AuditEvent["category"]>(
+    "practice:audit-filter",
+    "all",
+  );
+  const [selectedEvent, setSelectedEvent] = useSessionState(
+    "practice:selected-event",
+    auditEvents[0].id,
+  );
   const role = rolePermissions[selected];
   const events = filterAuditEvents(auditEvents, filter);
   const event =
