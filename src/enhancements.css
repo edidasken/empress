@@ -122,6 +122,27 @@ button:disabled { cursor: not-allowed; }
 .export-result span { display: grid; gap: 2px; }
 .export-result small { color: #526b61; }
 .export-result em { color: #7b694a; font-size: 9px; font-style: normal; text-transform: uppercase; letter-spacing: .08em; }
+.money-metrics { grid-template-columns: repeat(4, 1fr); }
+.money-layout { display: grid; grid-template-columns: 1.08fr .92fr; gap: 20px; }
+.money-side { display: grid; align-content: start; gap: 14px; }
+.money-head, .money-row { display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: center; }
+.money-head { padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.money-row { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.money-row > span { display: grid; gap: 4px; }
+.money-row small { color: var(--muted); font-size: 10px; }
+.money-row .negative { color: #85503e; }
+.money-total { display: flex; justify-content: space-between; padding: 16px 0; font-size: 18px; }
+.payment-ledger > button { margin-top: 4px; }
+.reconciliation .section-heading > svg { color: var(--green); }
+.recon-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.recon-row.variance { color: var(--green); }
+.refund-card .section-heading > button { border: 0; background: transparent; color: var(--muted); }
+.refund-source { display: flex; justify-content: space-between; padding: 13px; border-radius: 8px; background: #edf2ef; }
+.currency-input { display: grid; grid-template-columns: auto 1fr; align-items: center; border: 1px solid #cbd5cf; border-radius: 8px; background: white; }
+.currency-input > b { padding-left: 12px; color: var(--muted); }
+.currency-input input { border: 0; }
+.refund-card select { width: 100%; border: 1px solid #cbd5cf; border-radius: 8px; padding: 11px; background: white; }
+.refund-receipt { margin-top: 0; }
 
 @media (max-width: 800px) {
   .scrim { display: block; position: fixed; inset: 0; border: 0; background: #102d2570; z-index: 2; }
@@ -132,6 +153,8 @@ button:disabled { cursor: not-allowed; }
   .encounter-bar, .care-layout { grid-template-columns: 1fr; }
   .authorization-layout { grid-template-columns: 1fr; }
   .authorization-metrics { grid-template-columns: 1fr 1fr; }
+  .money-layout { grid-template-columns: 1fr; }
+  .money-metrics { grid-template-columns: 1fr 1fr; }
   .visit-status { justify-self: start; }
 }
 
