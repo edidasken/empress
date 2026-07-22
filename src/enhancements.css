@@ -27,6 +27,36 @@ button:disabled { cursor: not-allowed; }
 .client-detail small { font-size: 9px; letter-spacing: .1em; color: var(--muted); }
 .client-detail b { font-size: 12px; }
 .client-detail .primary { width: auto; }
+.message-layout { display: grid; grid-template-columns: 330px 1fr; gap: 20px; align-items: start; }
+.message-list { padding: 12px; }
+.message-list .section-heading { padding: 10px 8px 4px; }
+.message-list > button { display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center; width: 100%; border: 0 !important; border-top: 1px solid var(--line) !important; border-radius: 0 !important; background: transparent !important; padding: 13px 8px !important; text-align: left; color: inherit; }
+.message-list > button.selected { background: #e7f0eb !important; box-shadow: inset 3px 0 var(--green); }
+.message-list > button > span:nth-child(2) { display: grid; min-width: 0; gap: 4px; }
+.message-list > button small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.message-list em { border-radius: 99px; background: #dfece5; padding: 4px 6px; color: var(--green); font-size: 8px; font-style: normal; text-transform: uppercase; }
+.message-recipient { display: flex; justify-content: space-between; gap: 20px; align-items: end; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.message-recipient h3 { margin: 4px 0; }
+.message-recipient > div > span { color: var(--muted); font-size: 11px; }
+.message-recipient label { display: grid; width: 150px; gap: 5px; color: var(--muted); font-size: 10px; }
+.message-recipient select { border: 1px solid #cbd5cf; border-radius: 8px; background: white; padding: 9px; color: inherit; }
+.consent-banner { display: flex; gap: 10px; align-items: start; margin: 16px 0; border-radius: 9px; padding: 12px; }
+.consent-banner.ready { background: #e7f0eb; color: var(--green); }
+.consent-banner.blocked { background: #f3e9e4; color: #704737; }
+.consent-banner span { display: grid; gap: 3px; }
+.consent-banner small { font-size: 10px; color: inherit; opacity: .8; }
+.template-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.template-row button { padding: 8px 9px !important; font-size: 10px; }
+.message-field { display: grid; gap: 6px; margin: 16px 0; color: var(--muted); font-size: 11px; font-weight: 700; }
+.message-field textarea { min-height: 120px; margin: 0; color: var(--dark); font-weight: 400; }
+.message-field small { text-align: right; font-weight: 400; }
+.message-issue { border-radius: 8px; background: #f3e9e4; padding: 10px; color: #704737 !important; font-size: 11px; }
+.outbox-list { display: grid; gap: 8px; margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+.outbox-list > small { color: var(--muted); font-size: 9px; letter-spacing: .08em; }
+.outbox-list > div { display: grid; grid-template-columns: 120px 1fr; gap: 12px; border-radius: 8px; background: #edf2ef; padding: 12px; }
+.outbox-list span { display: grid; align-content: start; gap: 3px; }
+.outbox-list span small { color: var(--green); font-size: 9px; }
+.outbox-list p { margin: 0; font-size: 11px; }
 .client .client-detail .primary { background: var(--green) !important; color: white; white-space: nowrap; }
 .client > button { white-space: nowrap; }
 .scrim { display: none; }
@@ -307,6 +337,7 @@ button:disabled { cursor: not-allowed; }
 .audit-detail > p { display: flex; gap: 5px; align-items: center; margin-bottom: 0; color: var(--muted); font-size: 10px; }
 
 @media (max-width: 800px) {
+  .message-layout { grid-template-columns: 1fr; }
   .scrim { display: block; position: fixed; inset: 0; border: 0; background: #102d2570; z-index: 2; }
   .client-detail { grid-template-columns: 1fr 1fr; }
   .client-detail .primary { width: 100%; grid-column: 1 / -1; }

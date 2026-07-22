@@ -10,6 +10,7 @@ import {
   Menu,
   Plus,
   Search,
+  Send,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -34,6 +35,13 @@ import {
 import { flowProgress, upsertFlowAnswer, type FlowAnswer } from "./flows";
 import { acknowledgeIntake, intakeChanges, type IntakeProfile } from "./intake";
 import { moneyTotal, recordRefund, type MoneyEntry } from "./money";
+import {
+  applyMessageTemplate,
+  messageReadiness,
+  queueSyntheticMessage,
+  type MessageChannel,
+  type OutboxMessage,
+} from "./messages";
 import { searchForView, viewFromSearch } from "./routing";
 import { resourceConflicts, type ScheduleBlock } from "./schedule";
 import { clearEmpressSession, useSessionState } from "./session";
@@ -43,6 +51,7 @@ const nav = [
   "Today",
   "Calendar",
   "Clients",
+  "Messages",
   "Care",
   "Community Care",
   "Money",
@@ -286,6 +295,7 @@ function Route({
   if (view === "Calendar") return <Calendar privacy={privacy} />;
   if (view === "Clients")
     return <Clients privacy={privacy} onPrepare={() => onGo("Care")} />;
+  if (view === "Messages") return <Messages privacy={privacy} />;
   if (view === "Care") return <Care privacy={privacy} />;
   if (view === "Community Care") return <Community />;
   if (view === "Money") return <Money />;
@@ -1032,6 +1042,210 @@ function Clients({
                   </span>
                 </div>
               )}
+            </div>
+          )}
+        </section>
+      </div>
+    </Shell>
+  );
+}
+const messageClients = clientRecords.map((client, index) => ({
+  ...client,
+  consent: {
+    sms: index !== 1,
+    email: index !== 3,
+  },
+  contact: index === 1 ? "j•••@example.test" : "(***) ***-01" + (24 + index),
+  lastMessage:
+    index === 0
+      ? "Thank you — Friday works for me."
+      : index === 1
+        ? "Intake update received."
+        : "Appointment reminder delivered.",
+}));
+const messageTemplates = [
+  {
+    label: "Appointment reminder",
+    body: "Hi {first}, a reminder that your Empress appointment is {date} at {time}. Reply C to confirm.",
+  },
+  {
+    label: "Intake follow-up",
+    body: "Hi {first}, please review your synthetic intake before your appointment on {date}.",
+  },
+  {
+    label: "Care follow-up",
+    body: "Hi {first}, checking in after your visit. Reply if you need help with your care plan.",
+  },
+];
+function Messages({ privacy }: { privacy: boolean }) {
+  const [selected, setSelected] = useSessionState(
+    "messages:selected-client",
+    0,
+  );
+  const [channel, setChannel] = useSessionState<MessageChannel>(
+    "messages:channel",
+    "sms",
+  );
+  const [body, setBody] = useSessionState("messages:draft", "");
+  const [outbox, setOutbox] = useSessionState<OutboxMessage[]>(
+    "messages:outbox",
+    [],
+  );
+  const client = messageClients[selected];
+  const draft = { clientId: client.id, channel, body };
+  const issues = messageReadiness(draft, client.consent);
+  const queuedForClient = outbox.filter(
+    (message) => message.clientId === client.id,
+  );
+  const chooseTemplate = (template: string) =>
+    setBody(
+      applyMessageTemplate(template, {
+        first: client.name.split(" ")[0],
+        date: "Friday, July 24",
+        time: "9:00 AM",
+      }),
+    );
+  const queue = () => {
+    setOutbox((messages) =>
+      queueSyntheticMessage(
+        messages,
+        draft,
+        client.consent,
+        `MSG-${String(messages.length + 1).padStart(4, "0")}`,
+        new Date().toISOString(),
+      ),
+    );
+    setBody("");
+  };
+  return (
+    <Shell
+      tag="MESSAGES · CONSENT AWARE"
+      title="Reach out without losing context"
+      copy="Prepare appointment and care follow-ups through synthetic channels that honor each client’s recorded communication consent."
+    >
+      <div className="message-layout">
+        <aside className="card message-list">
+          <div className="section-heading">
+            <div>
+              <small>CONVERSATIONS</small>
+              <h3>Client messages</h3>
+            </div>
+            <span>{outbox.length} queued</span>
+          </div>
+          {messageClients.map((item, index) => (
+            <button
+              className={selected === index ? "selected" : ""}
+              aria-pressed={selected === index}
+              onClick={() => {
+                setSelected(index);
+                setBody("");
+                setChannel(item.consent.sms ? "sms" : "email");
+              }}
+              key={item.id}
+            >
+              <span className="client-avatar">
+                {privacy
+                  ? "•"
+                  : item.name
+                      .split(" ")
+                      .map((word) => word[0])
+                      .join("")}
+              </span>
+              <span>
+                <b>{privacy ? `Client ${item.id}` : item.name}</b>
+                <small>{item.lastMessage}</small>
+              </span>
+              {outbox.some((message) => message.clientId === item.id) && (
+                <em>Queued</em>
+              )}
+            </button>
+          ))}
+        </aside>
+        <section className="card message-workspace">
+          <div className="message-recipient">
+            <div>
+              <small>RECIPIENT · {client.id}</small>
+              <h3>{privacy ? "Client hidden" : client.name}</h3>
+              <span>{client.contact}</span>
+            </div>
+            <label>
+              <span>Channel</span>
+              <select
+                aria-label="Message channel"
+                value={channel}
+                onChange={(event) =>
+                  setChannel(event.target.value as MessageChannel)
+                }
+              >
+                <option value="sms">SMS</option>
+                <option value="email">Email</option>
+              </select>
+            </label>
+          </div>
+          <div
+            className={`consent-banner ${client.consent[channel] ? "ready" : "blocked"}`}
+          >
+            <ShieldCheck size={17} />
+            <span>
+              <b>
+                {client.consent[channel]
+                  ? `${channel.toUpperCase()} consent recorded`
+                  : `${channel.toUpperCase()} unavailable`}
+              </b>
+              <small>
+                {client.consent[channel]
+                  ? "Synthetic consent captured with communication preferences."
+                  : "Choose an allowed channel before adding this message to the outbox."}
+              </small>
+            </span>
+          </div>
+          <div className="template-row" aria-label="Message templates">
+            {messageTemplates.map((template) => (
+              <button
+                onClick={() => chooseTemplate(template.body)}
+                key={template.label}
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+          <label className="message-field">
+            <span>Message</span>
+            <textarea
+              aria-label="Synthetic message"
+              placeholder="Choose a template or write a minimum-necessary message."
+              value={body}
+              maxLength={320}
+              onChange={(event) => setBody(event.target.value)}
+            />
+            <small>
+              {body.length}/320 · Avoid clinical detail in notifications.
+            </small>
+          </label>
+          {issues.length > 0 && body && (
+            <p className="message-issue" role="status">
+              {issues.join(" · ")}
+            </p>
+          )}
+          <button
+            className="primary"
+            disabled={issues.length > 0}
+            onClick={queue}
+          >
+            <Send size={15} /> Queue synthetic message
+          </button>
+          {queuedForClient.length > 0 && (
+            <div className="outbox-list">
+              <small>LOCAL OUTBOX · NOT SENT</small>
+              {queuedForClient.map((message) => (
+                <div key={message.id}>
+                  <span>
+                    <b>{message.id}</b>
+                    <small>{message.channel.toUpperCase()} · Queued</small>
+                  </span>
+                  <p>{message.body}</p>
+                </div>
+              ))}
             </div>
           )}
         </section>
