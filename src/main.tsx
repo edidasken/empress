@@ -17,6 +17,13 @@ import {
 } from "lucide-react";
 import { auditProjection, filterAuditEvents, type AuditEvent } from "./audit";
 import {
+  bookableStarts,
+  serviceReadiness,
+  serviceWindowMinutes,
+  updateService,
+  type ServiceOffering,
+} from "./catalog";
+import {
   addCartItem,
   cartTotal,
   setCartQuantity,
@@ -66,6 +73,7 @@ const nav = [
   "Community Care",
   "Money",
   "Flows",
+  "Services",
   "Store",
   "Insights",
   "Practice",
@@ -331,6 +339,7 @@ function Route({
   if (view === "Community Care") return <Community />;
   if (view === "Money") return <Money />;
   if (view === "Flows") return <Flows />;
+  if (view === "Services") return <Services />;
   if (view === "Store") return <Store />;
   if (view === "Insights") return <Insights />;
   return <Practice />;
@@ -2166,6 +2175,97 @@ function Flows() {
           </aside>
         </div>
       )}
+    </Shell>
+  );
+}
+const defaultServices: ServiceOffering[] = [
+  {
+    id: "restore",
+    name: "Restore Flow",
+    durationMinutes: 60,
+    bufferMinutes: 15,
+    priceCents: 12500,
+    channel: "studio",
+    active: true,
+  },
+  {
+    id: "reset",
+    name: "Reset Session",
+    durationMinutes: 45,
+    bufferMinutes: 15,
+    priceCents: 8500,
+    channel: "both",
+    active: true,
+  },
+  {
+    id: "community",
+    name: "Community Care Massage",
+    durationMinutes: 60,
+    bufferMinutes: 15,
+    priceCents: 10500,
+    channel: "studio",
+    active: true,
+  },
+];
+function Services() {
+  const [services, setServices] = useSessionState<ServiceOffering[]>(
+    "services:catalog",
+    defaultServices,
+  );
+  const [selected, setSelected] = useSessionState("services:selected", 0);
+  const [draft, setDraft] = useState<ServiceOffering>(() => ({ ...services[selected] }));
+  const [saved, setSaved] = useState(false);
+  const issues = serviceReadiness(draft);
+  const choose = (index: number) => {
+    setSelected(index);
+    setDraft({ ...services[index] });
+    setSaved(false);
+  };
+  const save = () => {
+    setServices((current) => updateService(current, draft));
+    setSaved(true);
+  };
+  const price = (draft.priceCents / 100).toFixed(2);
+  return (
+    <Shell
+      tag="SERVICES · PRACTICE CATALOG"
+      title="Shape the care you offer"
+      copy="Configure duration, reset time, pricing, and delivery boundaries that downstream scheduling can enforce consistently."
+    >
+      <div className="service-layout">
+        <aside className="card service-list">
+          <div className="section-heading">
+            <div><small>CATALOG</small><h3>{services.length} services</h3></div>
+            <span>{services.filter((service) => service.active).length} active</span>
+          </div>
+          {services.map((service, index) => (
+            <button className={selected === index ? "selected" : ""} aria-pressed={selected === index} onClick={() => choose(index)} key={service.id}>
+              <span><b>{service.name}</b><small>{service.durationMinutes} min · ${(service.priceCents / 100).toFixed(0)}</small></span>
+              <em className={service.active ? "active" : "inactive"}>{service.active ? "Active" : "Hidden"}</em>
+            </button>
+          ))}
+        </aside>
+        <section className="card service-editor">
+          <div className="section-heading">
+            <div><small>EDIT SERVICE</small><h3>{draft.name || "Untitled service"}</h3></div>
+            <label className="service-switch"><input type="checkbox" checked={draft.active} onChange={(event) => { setDraft({ ...draft, active: event.target.checked }); setSaved(false); }} /><span>Bookable</span></label>
+          </div>
+          <div className="service-fields">
+            <label className="field"><span>Service name</span><input value={draft.name} onChange={(event) => { setDraft({ ...draft, name: event.target.value }); setSaved(false); }} /></label>
+            <label className="field"><span>Delivery</span><select value={draft.channel} onChange={(event) => { setDraft({ ...draft, channel: event.target.value as ServiceOffering["channel"] }); setSaved(false); }}><option value="studio">Studio</option><option value="mobile">Mobile</option><option value="both">Studio + mobile</option></select></label>
+            <label className="field"><span>Care duration · minutes</span><input type="number" min="15" max="240" value={draft.durationMinutes} onChange={(event) => { setDraft({ ...draft, durationMinutes: Number(event.target.value) }); setSaved(false); }} /></label>
+            <label className="field"><span>Reset buffer · minutes</span><input type="number" min="0" max="90" value={draft.bufferMinutes} onChange={(event) => { setDraft({ ...draft, bufferMinutes: Number(event.target.value) }); setSaved(false); }} /></label>
+            <label className="field"><span>Price · USD</span><div className="currency-input"><b>$</b><input aria-label="Service price" inputMode="decimal" value={price} onChange={(event) => { setDraft({ ...draft, priceCents: Math.round(Number(event.target.value) * 100) || 0 }); setSaved(false); }} /></div></label>
+          </div>
+          <div className="service-preview">
+            <div><small>TOTAL RESOURCE WINDOW</small><b>{serviceWindowMinutes(draft)} minutes</b><span>{draft.durationMinutes} care + {draft.bufferMinutes} reset</span></div>
+            <div><small>THEORETICAL DAY</small><b>{bookableStarts(540, 1020, draft)} starts</b><span>9:00 AM–5:00 PM before other constraints</span></div>
+          </div>
+          {issues.length > 0 && <p className="message-issue" role="status">{issues.join(" · ")}</p>}
+          {saved && <p className="service-saved" role="status"><CheckCircle2 size={16} /> Catalog update saved to this synthetic session.</p>}
+          <button className="primary" disabled={issues.length > 0 || saved} onClick={save}>{saved ? "Saved" : "Save service configuration"}</button>
+        </section>
+      </div>
     </Shell>
   );
 }
