@@ -265,6 +265,20 @@ button:disabled { cursor: not-allowed; }
 .content aside.card { position: static; width: auto; inset: auto; z-index: auto; padding: 24px; background: var(--cream); color: inherit; }
 .content aside.client-list { padding: 12px; }
 .content aside.cart-panel { position: sticky; top: 112px; }
+.week-strip { display: grid; grid-template-columns: repeat(5, 1fr); margin-bottom: 12px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: white; }
+.week-strip button { display: grid; justify-items: center; gap: 3px; padding: 11px; border: 0; border-right: 1px solid var(--line); background: transparent; color: inherit; }
+.week-strip button:last-child { border-right: 0; }
+.week-strip button.selected { background: var(--green); color: white; }
+.week-strip small { font-size: 9px; letter-spacing: .1em; }
+.week-strip b { font: 500 23px Georgia; }
+.week-strip span { color: var(--muted); font-size: 9px; }
+.week-strip button.selected span { color: #d6e7df; }
+.calendar-tools { display: flex; justify-content: space-between; align-items: end; gap: 15px; margin-bottom: 14px; padding: 12px 15px; border-radius: 10px; background: #e7efea; }
+.calendar-tools > div { display: flex; gap: 10px; }
+.calendar-tools label { display: grid; gap: 4px; color: var(--muted); font-size: 9px; }
+.calendar-tools select { min-width: 140px; border: 1px solid #c3d1c9; border-radius: 7px; padding: 8px 10px; background: white; }
+.calendar-tools > span { color: var(--muted); font-size: 11px; }
+.calendar-tools > span b { color: var(--green); font-size: 17px; }
 
 @media (max-width: 800px) {
   .scrim { display: block; position: fixed; inset: 0; border: 0; background: #102d2570; z-index: 2; }
@@ -277,6 +291,11 @@ button:disabled { cursor: not-allowed; }
   .clients-layout { grid-template-columns: 1fr; }
   .client-list { max-height: 330px; overflow: auto; }
   .content aside.cart-panel { position: static; }
+  .week-strip { overflow-x: auto; }
+  .week-strip button { min-width: 78px; }
+  .calendar-tools { align-items: stretch; flex-direction: column; }
+  .calendar-tools > div { display: grid; grid-template-columns: 1fr 1fr; }
+  .calendar-tools select { min-width: 0; width: 100%; }
   .authorization-layout { grid-template-columns: 1fr; }
   .authorization-metrics { grid-template-columns: 1fr 1fr; }
   .money-layout { grid-template-columns: 1fr; }
