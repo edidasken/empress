@@ -27,6 +27,28 @@ button:disabled { cursor: not-allowed; }
 .client .client-detail .primary { background: var(--green) !important; color: white; white-space: nowrap; }
 .client > button { white-space: nowrap; }
 .scrim { display: none; }
+.schedule { padding: 10px; }
+.schedule .slot { grid-template-columns: 70px 1fr auto; align-items: center; min-height: 62px; }
+.availability { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding: 5px 8px; border-radius: 99px; }
+.availability.available { background: #deeee5; color: #275d49; }
+.availability.booked { background: #eee7df; color: #75583d; }
+.availability.buffer { background: #e7e9e8; color: #66716c; }
+.booking-card select { width: 100%; border: 1px solid #cbd5cf; border-radius: 8px; padding: 11px 12px; background: white; color: inherit; }
+.field { display: grid; gap: 6px; margin: 18px 0; }
+.field > span { font-size: 11px; font-weight: 700; color: var(--muted); }
+.checks { border-block: 1px solid var(--line); padding: 8px 0; margin-bottom: 16px; }
+.checks p { margin: 5px 0; color: #395c4f; font-size: 13px; }
+.conflict, .hold { display: flex; gap: 10px; border-radius: 9px; padding: 12px; font-size: 12px; line-height: 1.45; }
+.conflict { display: grid; background: #f3e9e4; color: #6f4637; }
+.conflict span { color: #775d53; }
+.hold { align-items: center; background: #e4efe9; color: var(--green); }
+.hold span { display: grid; }
+.hold svg { flex: 0 0 auto; }
+.button-stack { display: grid; gap: 8px; }
+.confirmation { text-align: center; padding: 18px 0 8px; }
+.confirmation > svg { width: 46px; height: 46px; color: var(--green); margin-bottom: 10px; }
+.confirmation h3 { margin-bottom: 5px; }
+.confirmation small { display: block; color: var(--green); letter-spacing: .1em; }
 
 @media (max-width: 800px) {
   .scrim { display: block; position: fixed; inset: 0; border: 0; background: #102d2570; z-index: 2; }
