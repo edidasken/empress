@@ -143,6 +143,32 @@ button:disabled { cursor: not-allowed; }
 .currency-input input { border: 0; }
 .refund-card select { width: 100%; border: 1px solid #cbd5cf; border-radius: 8px; padding: 11px; background: white; }
 .refund-receipt { margin-top: 0; }
+.flow-layout { display: grid; grid-template-columns: 1.15fr .85fr; gap: 20px; }
+.flow-progress { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 9px; color: var(--muted); font-size: 10px; letter-spacing: .06em; }
+.flow-runner > h3 { margin-bottom: 4px; }
+.flow-runner > p { margin-top: 0; }
+.flow-options { display: grid; gap: 8px; margin: 18px 0; }
+.flow-options button { display: grid; grid-template-columns: 28px 1fr; align-items: center; text-align: left; background: white !important; padding: 11px !important; }
+.flow-options button > span { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid #bccbc3; border-radius: 50%; }
+.flow-options button.selected { border-color: var(--green) !important; background: #e7f0eb !important; }
+.flow-options button.selected > span { background: var(--green); color: white; border-color: var(--green); }
+.flow-actions { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+.flow-context dl { margin: 15px 0; }
+.flow-context dt { padding-top: 11px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.flow-context dd { margin: 5px 0 12px; font-weight: 700; }
+.flow-safety { display: flex; gap: 9px; align-items: start; padding: 12px; border-radius: 9px; background: #e8f0eb; color: var(--green); }
+.flow-safety svg { flex: 0 0 auto; }
+.flow-safety span { display: grid; gap: 3px; font-size: 11px; line-height: 1.4; }
+.flow-summary { display: grid; margin: 20px 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.flow-summary > div { display: grid; grid-template-columns: 1fr 1.3fr auto; gap: 14px; align-items: center; padding: 14px; border-bottom: 1px solid var(--line); }
+.flow-summary > div:last-child { border-bottom: 0; }
+.flow-summary span { color: var(--muted); }
+.flow-summary button { border: 0 !important; background: transparent !important; color: var(--green); }
+.flow-complete { text-align: center; padding: 34px; }
+.flow-complete > svg { width: 48px; height: 48px; color: var(--green); }
+.flow-complete h3 { margin-bottom: 3px; }
+.flow-complete > p { max-width: 600px; margin: 0 auto; }
+.flow-complete .flow-summary { text-align: left; }
 
 @media (max-width: 800px) {
   .scrim { display: block; position: fixed; inset: 0; border: 0; background: #102d2570; z-index: 2; }
@@ -155,6 +181,7 @@ button:disabled { cursor: not-allowed; }
   .authorization-metrics { grid-template-columns: 1fr 1fr; }
   .money-layout { grid-template-columns: 1fr; }
   .money-metrics { grid-template-columns: 1fr 1fr; }
+  .flow-layout { grid-template-columns: 1fr; }
   .visit-status { justify-self: start; }
 }
 
@@ -166,4 +193,5 @@ button:disabled { cursor: not-allowed; }
   .review-title { display: grid; }
   .authorization-alert { grid-template-columns: auto 1fr; }
   .authorization-alert > span { grid-column: 2; justify-self: start; }
+  .flow-summary > div { grid-template-columns: 1fr; gap: 5px; }
 }
