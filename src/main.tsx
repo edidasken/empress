@@ -551,6 +551,19 @@ function Calendar({ privacy }: { privacy: boolean }) {
     "Elena",
   );
   const [room, setRoom] = useSessionState("calendar:room", "Willow");
+  const [services] = useSessionState<ServiceOffering[]>(
+    "services:catalog",
+    defaultServices,
+  );
+  const activeServices = services.filter((service) => service.active);
+  const [serviceId, setServiceId] = useSessionState(
+    "calendar:service",
+    activeServices[0]?.id ?? defaultServices[0].id,
+  );
+  const service =
+    activeServices.find((offering) => offering.id === serviceId) ??
+    activeServices[0] ??
+    defaultServices[0];
   const blocks: ScheduleBlock[] =
     day === 0
       ? [
@@ -612,7 +625,7 @@ function Calendar({ privacy }: { privacy: boolean }) {
           : [];
   const slotState = (start: number) => {
     const conflicts = resourceConflicts(
-      { start, end: start + 60, therapist, room },
+      { start, end: start + serviceWindowMinutes(service), therapist, room },
       blocks,
     );
     return conflicts.some((item) => item.kind === "buffer")
@@ -722,7 +735,7 @@ function Calendar({ privacy }: { privacy: boolean }) {
                       : "Booked · synthetic client"
                     : state === "buffer"
                       ? "Protected resource buffer"
-                      : "Available · 60 minutes"}
+                      : `Available · ${service.durationMinutes} minutes`}
                 </span>
                 <span className={`availability ${state}`}>{state}</span>
               </button>
@@ -737,19 +750,36 @@ function Calendar({ privacy }: { privacy: boolean }) {
             <div className="confirmation">
               <CheckCircle2 />
               <small>APPOINTMENT CONFIRMED</small>
-              <h3>{slot} · Restore Flow</h3>
+              <h3>{slot} · {service.name}</h3>
               <p>
                 {privacy ? "Synthetic client" : client}
                 <br />
                 {therapist} · {room} room
                 <br />
-                {calendarDays[day].label} · 60 minutes
+                {calendarDays[day].label} · {service.durationMinutes} minutes
               </p>
               <button onClick={() => setStatus(null)}>Schedule another</button>
             </div>
           ) : (
             <>
-              <h3>{slot} · Restore Flow</h3>
+              <h3>{slot} · {service.name}</h3>
+              <label className="field">
+                <span>Service</span>
+                <select
+                  aria-label="Service"
+                  value={service.id}
+                  onChange={(event) => {
+                    setServiceId(event.target.value);
+                    setStatus(null);
+                  }}
+                >
+                  {activeServices.map((offering) => (
+                    <option value={offering.id} key={offering.id}>
+                      {offering.name} · {offering.durationMinutes} min
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="field">
                 <span>Client</span>
                 <select
@@ -764,7 +794,7 @@ function Calendar({ privacy }: { privacy: boolean }) {
               <div className="checks">
                 <p>✓ {therapist} selected</p>
                 <p>✓ {room} room selected</p>
-                <p>✓ 60 min + 15 min buffer</p>
+                <p>✓ {service.durationMinutes} min + {service.bufferMinutes} min buffer</p>
               </div>
               {selectedState !== "available" ? (
                 <p className="conflict" role="status">
