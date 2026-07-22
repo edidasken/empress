@@ -279,6 +279,29 @@ button:disabled { cursor: not-allowed; }
 .calendar-tools select { min-width: 140px; border: 1px solid #c3d1c9; border-radius: 7px; padding: 8px 10px; background: white; }
 .calendar-tools > span { color: var(--muted); font-size: 11px; }
 .calendar-tools > span b { color: var(--green); font-size: 17px; }
+.audit-panel { margin-top: 20px; }
+.audit-heading { display: flex; justify-content: space-between; gap: 20px; align-items: end; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.audit-heading h3 { margin: 5px 0; }
+.audit-heading p { margin: 0; }
+.audit-filters { display: flex; padding: 4px; border-radius: 8px; background: #edf1ee; }
+.audit-filters button { border: 0 !important; background: transparent !important; padding: 7px 10px !important; color: var(--muted); }
+.audit-filters button.selected { background: white !important; color: var(--green); box-shadow: 0 1px 4px #173b3015; }
+.audit-layout { display: grid; grid-template-columns: 1fr 340px; gap: 18px; padding-top: 16px; }
+.audit-events { display: grid; align-content: start; }
+.audit-events > button { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; width: 100%; padding: 12px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; color: inherit; text-align: left; }
+.audit-events > button.selected { border-radius: 8px; background: #e7f0eb; }
+.audit-events > button > span:nth-child(2) { display: grid; gap: 3px; }
+.audit-events small { color: var(--muted); }
+.audit-events em { color: var(--muted); font-size: 8px; font-style: normal; text-transform: uppercase; letter-spacing: .08em; }
+.audit-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-weight: 700; }
+.audit-icon.allowed { background: #dcece3; color: var(--green); }
+.audit-icon.blocked { background: #f0e1dc; color: #8b4d38; }
+.audit-detail { padding: 16px; border-radius: 10px; background: #edf2ef; }
+.content aside.audit-detail { position: static; width: auto; inset: auto; z-index: auto; color: inherit; }
+.audit-detail dl { display: grid; grid-template-columns: auto 1fr; gap: 9px 12px; }
+.audit-detail dt { color: var(--muted); font-size: 10px; }
+.audit-detail dd { margin: 0; text-align: right; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
+.audit-detail > p { display: flex; gap: 5px; align-items: center; margin-bottom: 0; color: var(--muted); font-size: 10px; }
 
 @media (max-width: 800px) {
   .scrim { display: block; position: fixed; inset: 0; border: 0; background: #102d2570; z-index: 2; }
@@ -296,6 +319,9 @@ button:disabled { cursor: not-allowed; }
   .calendar-tools { align-items: stretch; flex-direction: column; }
   .calendar-tools > div { display: grid; grid-template-columns: 1fr 1fr; }
   .calendar-tools select { min-width: 0; width: 100%; }
+  .audit-heading { align-items: stretch; flex-direction: column; }
+  .audit-filters { align-self: start; overflow-x: auto; max-width: 100%; }
+  .audit-layout { grid-template-columns: 1fr; }
   .authorization-layout { grid-template-columns: 1fr; }
   .authorization-metrics { grid-template-columns: 1fr 1fr; }
   .money-layout { grid-template-columns: 1fr; }
