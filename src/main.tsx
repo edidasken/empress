@@ -17,6 +17,13 @@ import {
 } from "lucide-react";
 import { auditProjection, filterAuditEvents, type AuditEvent } from "./audit";
 import {
+  bookingReadiness,
+  createBookingRequest,
+  formatBookingTime,
+  type BookingDraft,
+  type BookingRequest,
+} from "./booking";
+import {
   bookableStarts,
   serviceReadiness,
   serviceWindowMinutes,
@@ -67,6 +74,7 @@ import "./enhancements.css";
 const nav = [
   "Today",
   "Calendar",
+  "Book Online",
   "Clients",
   "Messages",
   "Care",
@@ -318,6 +326,7 @@ function Route({
       />
     );
   if (view === "Calendar") return <Calendar privacy={privacy} />;
+  if (view === "Book Online") return <OnlineBooking />;
   if (view === "Clients")
     return (
       <Clients
@@ -750,7 +759,9 @@ function Calendar({ privacy }: { privacy: boolean }) {
             <div className="confirmation">
               <CheckCircle2 />
               <small>APPOINTMENT CONFIRMED</small>
-              <h3>{slot} · {service.name}</h3>
+              <h3>
+                {slot} · {service.name}
+              </h3>
               <p>
                 {privacy ? "Synthetic client" : client}
                 <br />
@@ -762,7 +773,9 @@ function Calendar({ privacy }: { privacy: boolean }) {
             </div>
           ) : (
             <>
-              <h3>{slot} · {service.name}</h3>
+              <h3>
+                {slot} · {service.name}
+              </h3>
               <label className="field">
                 <span>Service</span>
                 <select
@@ -794,7 +807,10 @@ function Calendar({ privacy }: { privacy: boolean }) {
               <div className="checks">
                 <p>✓ {therapist} selected</p>
                 <p>✓ {room} room selected</p>
-                <p>✓ {service.durationMinutes} min + {service.bufferMinutes} min buffer</p>
+                <p>
+                  ✓ {service.durationMinutes} min + {service.bufferMinutes} min
+                  buffer
+                </p>
               </div>
               {selectedState !== "available" ? (
                 <p className="conflict" role="status">
@@ -843,6 +859,277 @@ function Calendar({ privacy }: { privacy: boolean }) {
           )}
         </section>
       </div>
+    </Shell>
+  );
+}
+const bookingDates = [
+  { value: "2026-07-24", day: "FRI", date: "24", label: "July 24" },
+  { value: "2026-07-25", day: "SAT", date: "25", label: "July 25" },
+  { value: "2026-07-27", day: "MON", date: "27", label: "July 27" },
+];
+const bookingTimes = [540, 630, 780, 870];
+const emptyBooking: BookingDraft = {
+  serviceId: "restore",
+  date: "2026-07-24",
+  startMinutes: null,
+  firstName: "",
+  email: "",
+  acceptsPolicy: false,
+};
+function OnlineBooking() {
+  const [services] = useSessionState<ServiceOffering[]>(
+    "services:catalog",
+    defaultServices,
+  );
+  const activeServices = services.filter((service) => service.active);
+  const [draft, setDraft] = useSessionState<BookingDraft>(
+    "booking:draft",
+    emptyBooking,
+  );
+  const [step, setStep] = useSessionState("booking:step", 0);
+  const [requests, setRequests] = useSessionState<BookingRequest[]>(
+    "booking:requests",
+    [],
+  );
+  const [receiptId, setReceiptId] = useSessionState<string | null>(
+    "booking:receipt",
+    null,
+  );
+  const service =
+    activeServices.find((offering) => offering.id === draft.serviceId) ??
+    activeServices[0] ??
+    defaultServices[0];
+  const issues = bookingReadiness(draft);
+  const request = () => {
+    const id = `BOOK-${String(requests.length + 1042).padStart(4, "0")}`;
+    setRequests((current) =>
+      createBookingRequest(current, draft, id, new Date().toISOString()),
+    );
+    setReceiptId(id);
+  };
+  const restart = () => {
+    setDraft({
+      ...emptyBooking,
+      serviceId: activeServices[0]?.id ?? "restore",
+    });
+    setStep(0);
+    setReceiptId(null);
+  };
+  if (receiptId) {
+    const receipt = requests.find((item) => item.id === receiptId);
+    return (
+      <Shell
+        tag="ONLINE BOOKING · SYNTHETIC"
+        title="Your request is in"
+        copy="The practice will review the appointment details before the time is confirmed."
+      >
+        <section className="card booking-receipt">
+          <CheckCircle2 />
+          <small>REQUEST RECEIVED · {receiptId}</small>
+          <h3>{service.name}</h3>
+          <p>
+            {bookingDates.find((date) => date.value === draft.date)?.label} ·{" "}
+            {draft.startMinutes !== null
+              ? formatBookingTime(draft.startMinutes)
+              : ""}
+            <br />
+            {service.durationMinutes} minutes · $
+            {(service.priceCents / 100).toFixed(2)}
+          </p>
+          <div className="booking-next">
+            <Clock3 />
+            <span>
+              <b>
+                {receipt?.status === "confirmed"
+                  ? "Confirmed by the practice"
+                  : "Awaiting practice confirmation"}
+              </b>
+              <small>
+                No real email or payment was sent in this synthetic flow.
+              </small>
+            </span>
+          </div>
+          <button onClick={restart}>Start another request</button>
+        </section>
+      </Shell>
+    );
+  }
+  return (
+    <Shell
+      tag="ONLINE BOOKING · CLIENT PREVIEW"
+      title="Make space for care"
+      copy="A calm, minimum-necessary booking request that uses the practice’s active services and protected reset times."
+    >
+      <div
+        className="booking-progress"
+        aria-label={`Booking step ${step + 1} of 3`}
+      >
+        {["Service", "Time", "Details"].map((label, index) => (
+          <span className={index <= step ? "active" : ""} key={label}>
+            <b>{index + 1}</b>
+            {label}
+          </span>
+        ))}
+      </div>
+      <section className="card public-booking">
+        {step === 0 && (
+          <>
+            <div className="section-heading">
+              <div>
+                <small>STEP 1 OF 3</small>
+                <h3>Choose your care</h3>
+              </div>
+              <Leaf />
+            </div>
+            <div className="booking-services">
+              {activeServices.map((offering) => (
+                <button
+                  className={draft.serviceId === offering.id ? "selected" : ""}
+                  aria-pressed={draft.serviceId === offering.id}
+                  onClick={() => setDraft({ ...draft, serviceId: offering.id })}
+                  key={offering.id}
+                >
+                  <span>
+                    <b>{offering.name}</b>
+                    <small>
+                      {offering.durationMinutes} minutes ·{" "}
+                      {offering.channel === "both"
+                        ? "Studio or mobile"
+                        : offering.channel}
+                    </small>
+                  </span>
+                  <strong>${(offering.priceCents / 100).toFixed(0)}</strong>
+                </button>
+              ))}
+            </div>
+            <button className="primary" onClick={() => setStep(1)}>
+              Choose a time <ChevronRight />
+            </button>
+          </>
+        )}
+        {step === 1 && (
+          <>
+            <div className="section-heading">
+              <div>
+                <small>STEP 2 OF 3</small>
+                <h3>Find a gentle opening</h3>
+              </div>
+              <span>{service.durationMinutes} min</span>
+            </div>
+            <div className="booking-days">
+              {bookingDates.map((date) => (
+                <button
+                  className={draft.date === date.value ? "selected" : ""}
+                  aria-pressed={draft.date === date.value}
+                  onClick={() =>
+                    setDraft({ ...draft, date: date.value, startMinutes: null })
+                  }
+                  key={date.value}
+                >
+                  <small>{date.day}</small>
+                  <b>{date.date}</b>
+                </button>
+              ))}
+            </div>
+            <div className="booking-times" aria-label="Available times">
+              {bookingTimes.map((time) => (
+                <button
+                  className={draft.startMinutes === time ? "selected" : ""}
+                  aria-pressed={draft.startMinutes === time}
+                  onClick={() => setDraft({ ...draft, startMinutes: time })}
+                  key={time}
+                >
+                  {formatBookingTime(time)}
+                </button>
+              ))}
+            </div>
+            <div className="booking-actions">
+              <button onClick={() => setStep(0)}>Back</button>
+              <button
+                className="primary"
+                disabled={draft.startMinutes === null}
+                onClick={() => setStep(2)}
+              >
+                Continue <ChevronRight />
+              </button>
+            </div>
+          </>
+        )}
+        {step === 2 && (
+          <>
+            <div className="section-heading">
+              <div>
+                <small>STEP 3 OF 3</small>
+                <h3>How should we follow up?</h3>
+              </div>
+              <span>Secure request</span>
+            </div>
+            <div className="booking-summary">
+              <b>{service.name}</b>
+              <span>
+                {bookingDates.find((date) => date.value === draft.date)?.label}{" "}
+                ·{" "}
+                {draft.startMinutes !== null
+                  ? formatBookingTime(draft.startMinutes)
+                  : ""}
+              </span>
+            </div>
+            <div className="booking-contact">
+              <label className="field">
+                <span>First name</span>
+                <input
+                  autoComplete="given-name"
+                  value={draft.firstName}
+                  onChange={(event) =>
+                    setDraft({ ...draft, firstName: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Email</span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={draft.email}
+                  onChange={(event) =>
+                    setDraft({ ...draft, email: event.target.value })
+                  }
+                />
+              </label>
+            </div>
+            <label className="attestation">
+              <input
+                type="checkbox"
+                checked={draft.acceptsPolicy}
+                onChange={(event) =>
+                  setDraft({ ...draft, acceptsPolicy: event.target.checked })
+                }
+              />
+              <span>
+                <b>I accept the synthetic booking policy</b>
+                <small>
+                  This request is not confirmed until the practice reviews it.
+                </small>
+              </span>
+            </label>
+            {issues.length > 0 && (draft.firstName || draft.email) && (
+              <p className="message-issue" role="status">
+                {issues.join(" · ")}
+              </p>
+            )}
+            <div className="booking-actions">
+              <button onClick={() => setStep(1)}>Back</button>
+              <button
+                className="primary"
+                disabled={issues.length > 0}
+                onClick={request}
+              >
+                Request appointment
+              </button>
+            </div>
+          </>
+        )}
+      </section>
     </Shell>
   );
 }
@@ -2243,7 +2530,9 @@ function Services() {
     defaultServices,
   );
   const [selected, setSelected] = useSessionState("services:selected", 0);
-  const [draft, setDraft] = useState<ServiceOffering>(() => ({ ...services[selected] }));
+  const [draft, setDraft] = useState<ServiceOffering>(() => ({
+    ...services[selected],
+  }));
   const [saved, setSaved] = useState(false);
   const issues = serviceReadiness(draft);
   const choose = (index: number) => {
@@ -2265,35 +2554,164 @@ function Services() {
       <div className="service-layout">
         <aside className="card service-list">
           <div className="section-heading">
-            <div><small>CATALOG</small><h3>{services.length} services</h3></div>
-            <span>{services.filter((service) => service.active).length} active</span>
+            <div>
+              <small>CATALOG</small>
+              <h3>{services.length} services</h3>
+            </div>
+            <span>
+              {services.filter((service) => service.active).length} active
+            </span>
           </div>
           {services.map((service, index) => (
-            <button className={selected === index ? "selected" : ""} aria-pressed={selected === index} onClick={() => choose(index)} key={service.id}>
-              <span><b>{service.name}</b><small>{service.durationMinutes} min · ${(service.priceCents / 100).toFixed(0)}</small></span>
-              <em className={service.active ? "active" : "inactive"}>{service.active ? "Active" : "Hidden"}</em>
+            <button
+              className={selected === index ? "selected" : ""}
+              aria-pressed={selected === index}
+              onClick={() => choose(index)}
+              key={service.id}
+            >
+              <span>
+                <b>{service.name}</b>
+                <small>
+                  {service.durationMinutes} min · $
+                  {(service.priceCents / 100).toFixed(0)}
+                </small>
+              </span>
+              <em className={service.active ? "active" : "inactive"}>
+                {service.active ? "Active" : "Hidden"}
+              </em>
             </button>
           ))}
         </aside>
         <section className="card service-editor">
           <div className="section-heading">
-            <div><small>EDIT SERVICE</small><h3>{draft.name || "Untitled service"}</h3></div>
-            <label className="service-switch"><input type="checkbox" checked={draft.active} onChange={(event) => { setDraft({ ...draft, active: event.target.checked }); setSaved(false); }} /><span>Bookable</span></label>
+            <div>
+              <small>EDIT SERVICE</small>
+              <h3>{draft.name || "Untitled service"}</h3>
+            </div>
+            <label className="service-switch">
+              <input
+                type="checkbox"
+                checked={draft.active}
+                onChange={(event) => {
+                  setDraft({ ...draft, active: event.target.checked });
+                  setSaved(false);
+                }}
+              />
+              <span>Bookable</span>
+            </label>
           </div>
           <div className="service-fields">
-            <label className="field"><span>Service name</span><input value={draft.name} onChange={(event) => { setDraft({ ...draft, name: event.target.value }); setSaved(false); }} /></label>
-            <label className="field"><span>Delivery</span><select value={draft.channel} onChange={(event) => { setDraft({ ...draft, channel: event.target.value as ServiceOffering["channel"] }); setSaved(false); }}><option value="studio">Studio</option><option value="mobile">Mobile</option><option value="both">Studio + mobile</option></select></label>
-            <label className="field"><span>Care duration · minutes</span><input type="number" min="15" max="240" value={draft.durationMinutes} onChange={(event) => { setDraft({ ...draft, durationMinutes: Number(event.target.value) }); setSaved(false); }} /></label>
-            <label className="field"><span>Reset buffer · minutes</span><input type="number" min="0" max="90" value={draft.bufferMinutes} onChange={(event) => { setDraft({ ...draft, bufferMinutes: Number(event.target.value) }); setSaved(false); }} /></label>
-            <label className="field"><span>Price · USD</span><div className="currency-input"><b>$</b><input aria-label="Service price" inputMode="decimal" value={price} onChange={(event) => { setDraft({ ...draft, priceCents: Math.round(Number(event.target.value) * 100) || 0 }); setSaved(false); }} /></div></label>
+            <label className="field">
+              <span>Service name</span>
+              <input
+                value={draft.name}
+                onChange={(event) => {
+                  setDraft({ ...draft, name: event.target.value });
+                  setSaved(false);
+                }}
+              />
+            </label>
+            <label className="field">
+              <span>Delivery</span>
+              <select
+                value={draft.channel}
+                onChange={(event) => {
+                  setDraft({
+                    ...draft,
+                    channel: event.target.value as ServiceOffering["channel"],
+                  });
+                  setSaved(false);
+                }}
+              >
+                <option value="studio">Studio</option>
+                <option value="mobile">Mobile</option>
+                <option value="both">Studio + mobile</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Care duration · minutes</span>
+              <input
+                type="number"
+                min="15"
+                max="240"
+                value={draft.durationMinutes}
+                onChange={(event) => {
+                  setDraft({
+                    ...draft,
+                    durationMinutes: Number(event.target.value),
+                  });
+                  setSaved(false);
+                }}
+              />
+            </label>
+            <label className="field">
+              <span>Reset buffer · minutes</span>
+              <input
+                type="number"
+                min="0"
+                max="90"
+                value={draft.bufferMinutes}
+                onChange={(event) => {
+                  setDraft({
+                    ...draft,
+                    bufferMinutes: Number(event.target.value),
+                  });
+                  setSaved(false);
+                }}
+              />
+            </label>
+            <label className="field">
+              <span>Price · USD</span>
+              <div className="currency-input">
+                <b>$</b>
+                <input
+                  aria-label="Service price"
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(event) => {
+                    setDraft({
+                      ...draft,
+                      priceCents:
+                        Math.round(Number(event.target.value) * 100) || 0,
+                    });
+                    setSaved(false);
+                  }}
+                />
+              </div>
+            </label>
           </div>
           <div className="service-preview">
-            <div><small>TOTAL RESOURCE WINDOW</small><b>{serviceWindowMinutes(draft)} minutes</b><span>{draft.durationMinutes} care + {draft.bufferMinutes} reset</span></div>
-            <div><small>THEORETICAL DAY</small><b>{bookableStarts(540, 1020, draft)} starts</b><span>9:00 AM–5:00 PM before other constraints</span></div>
+            <div>
+              <small>TOTAL RESOURCE WINDOW</small>
+              <b>{serviceWindowMinutes(draft)} minutes</b>
+              <span>
+                {draft.durationMinutes} care + {draft.bufferMinutes} reset
+              </span>
+            </div>
+            <div>
+              <small>THEORETICAL DAY</small>
+              <b>{bookableStarts(540, 1020, draft)} starts</b>
+              <span>9:00 AM–5:00 PM before other constraints</span>
+            </div>
           </div>
-          {issues.length > 0 && <p className="message-issue" role="status">{issues.join(" · ")}</p>}
-          {saved && <p className="service-saved" role="status"><CheckCircle2 size={16} /> Catalog update saved to this synthetic session.</p>}
-          <button className="primary" disabled={issues.length > 0 || saved} onClick={save}>{saved ? "Saved" : "Save service configuration"}</button>
+          {issues.length > 0 && (
+            <p className="message-issue" role="status">
+              {issues.join(" · ")}
+            </p>
+          )}
+          {saved && (
+            <p className="service-saved" role="status">
+              <CheckCircle2 size={16} /> Catalog update saved to this synthetic
+              session.
+            </p>
+          )}
+          <button
+            className="primary"
+            disabled={issues.length > 0 || saved}
+            onClick={save}
+          >
+            {saved ? "Saved" : "Save service configuration"}
+          </button>
         </section>
       </div>
     </Shell>
@@ -2508,20 +2926,29 @@ const monthlyVisitSignals: VisitSignal[] = [
   ...Array.from({ length: 39 }, (_, index) => ({
     id: `month-${index}`,
     clientId: `EMP-${1024 + (index % 22)}`,
-    service: index % 5 === 0 ? "Community Care" : index % 7 === 0 ? "Reset Session" : "Restore Flow",
+    service:
+      index % 5 === 0
+        ? "Community Care"
+        : index % 7 === 0
+          ? "Reset Session"
+          : "Restore Flow",
     status: "completed" as const,
     revenueCents: index % 5 === 0 ? 10500 : index % 7 === 0 ? 8500 : 12500,
   })),
 ];
 function Insights() {
-  const [period, setPeriod] = useSessionState<"7" | "30">("insights:period", "7");
+  const [period, setPeriod] = useSessionState<"7" | "30">(
+    "insights:period",
+    "7",
+  );
   const summary = summarizePractice(
     period === "7" ? weeklyVisitSignals : monthlyVisitSignals,
     period === "7" ? 22 : 78,
   );
   const revenueBaseline = period === "7" ? 188500 : 647000;
   const revenueChange = percentageChange(summary.revenueCents, revenueBaseline);
-  const daily = period === "7" ? [2, 4, 3, 4, 3, 1, 0] : [12, 15, 14, 17, 13, 11, 10];
+  const daily =
+    period === "7" ? [2, 4, 3, 4, 3, 1, 0] : [12, 15, 14, 17, 13, 11, 10];
   const maxDay = Math.max(...daily);
   const money = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -2540,22 +2967,43 @@ function Insights() {
           <b>{period === "7" ? "July 16–22" : "June 23–July 22"}</b>
         </div>
         <div className="period-toggle" role="group" aria-label="Insight period">
-          <button className={period === "7" ? "selected" : ""} onClick={() => setPeriod("7")}>7 days</button>
-          <button className={period === "30" ? "selected" : ""} onClick={() => setPeriod("30")}>30 days</button>
+          <button
+            className={period === "7" ? "selected" : ""}
+            onClick={() => setPeriod("7")}
+          >
+            7 days
+          </button>
+          <button
+            className={period === "30" ? "selected" : ""}
+            onClick={() => setPeriod("30")}
+          >
+            30 days
+          </button>
         </div>
       </div>
       <section className="insight-metrics" aria-label="Practice summary">
         <article className="card">
           <small>COLLECTED REVENUE</small>
           <b>{money.format(summary.revenueCents / 100)}</b>
-          <span className={revenueChange !== null && revenueChange >= 0 ? "positive" : "neutral"}>
-            {revenueChange === null ? "New baseline" : `${revenueChange >= 0 ? "+" : ""}${revenueChange}%`} vs prior period
+          <span
+            className={
+              revenueChange !== null && revenueChange >= 0
+                ? "positive"
+                : "neutral"
+            }
+          >
+            {revenueChange === null
+              ? "New baseline"
+              : `${revenueChange >= 0 ? "+" : ""}${revenueChange}%`}{" "}
+            vs prior period
           </span>
         </article>
         <article className="card">
           <small>COMPLETED VISITS</small>
           <b>{summary.completed}</b>
-          <span>{summary.scheduled} upcoming · {summary.cancelled} cancelled</span>
+          <span>
+            {summary.scheduled} upcoming · {summary.cancelled} cancelled
+          </span>
         </article>
         <article className="card">
           <small>UTILIZATION</small>
@@ -2571,14 +3019,23 @@ function Insights() {
       <div className="insight-grid">
         <section className="card visit-chart">
           <div className="section-heading">
-            <div><small>VISIT RHYTHM</small><h3>Completed care</h3></div>
+            <div>
+              <small>VISIT RHYTHM</small>
+              <h3>Completed care</h3>
+            </div>
             <span>{summary.completed} visits</span>
           </div>
-          <div className="bar-chart" role="img" aria-label={`Daily completed visits: ${daily.join(", ")}`}>
+          <div
+            className="bar-chart"
+            role="img"
+            aria-label={`Daily completed visits: ${daily.join(", ")}`}
+          >
             {daily.map((count, index) => (
               <div key={index}>
                 <span>{count}</span>
-                <i style={{ height: `${Math.max(5, (count / maxDay) * 100)}%` }} />
+                <i
+                  style={{ height: `${Math.max(5, (count / maxDay) * 100)}%` }}
+                />
                 <small>{["W", "T", "F", "S", "S", "M", "T"][index]}</small>
               </div>
             ))}
@@ -2586,17 +3043,31 @@ function Insights() {
         </section>
         <section className="card service-mix">
           <div className="section-heading">
-            <div><small>SERVICE MIX</small><h3>Care delivered</h3></div>
+            <div>
+              <small>SERVICE MIX</small>
+              <h3>Care delivered</h3>
+            </div>
             <BarChart3 size={21} />
           </div>
           {summary.serviceMix.map((service) => (
             <div className="mix-row" key={service.service}>
-              <span><b>{service.service}</b><small>{service.visits} visits</small></span>
-              <div className="mix-track" aria-label={`${service.service}: ${service.percent}%`}><i style={{ width: `${service.percent}%` }} /></div>
+              <span>
+                <b>{service.service}</b>
+                <small>{service.visits} visits</small>
+              </span>
+              <div
+                className="mix-track"
+                aria-label={`${service.service}: ${service.percent}%`}
+              >
+                <i style={{ width: `${service.percent}%` }} />
+              </div>
               <b>{service.percent}%</b>
             </div>
           ))}
-          <p className="insight-note"><ShieldCheck size={14} /> Aggregated only; no individual client or clinical detail.</p>
+          <p className="insight-note">
+            <ShieldCheck size={14} /> Aggregated only; no individual client or
+            clinical detail.
+          </p>
         </section>
       </div>
     </Shell>
