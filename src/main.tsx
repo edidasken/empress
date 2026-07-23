@@ -18,6 +18,7 @@ import {
 import { auditProjection, filterAuditEvents, type AuditEvent } from "./audit";
 import {
   bookingReadiness,
+  confirmBookingRequest,
   createBookingRequest,
   formatBookingTime,
   type BookingDraft,
@@ -323,6 +324,7 @@ function Route({
         privacy={privacy}
         onPrepare={() => onGo("Care")}
         onMessage={() => onGo("Messages")}
+        onCalendar={() => onGo("Calendar")}
       />
     );
   if (view === "Calendar") return <Calendar privacy={privacy} />;
@@ -383,10 +385,12 @@ function Today({
   privacy,
   onPrepare,
   onMessage,
+  onCalendar,
 }: {
   privacy: boolean;
   onPrepare: () => void;
   onMessage: () => void;
+  onCalendar: () => void;
 }) {
   const [visitStatus, setVisitStatus] = useSessionState<Status>(
     "today:visit-status",
@@ -412,6 +416,13 @@ function Today({
       done: false,
     },
   ]);
+  const [bookingRequests] = useSessionState<BookingRequest[]>(
+    "booking:requests",
+    [],
+  );
+  const pendingBookings = bookingRequests.filter(
+    (request) => request.status === "requested",
+  ).length;
   const remaining = tasks.filter((task) => !task.done).length;
   const advance = () => {
     if (visitStatus === "confirmed")
@@ -498,6 +509,15 @@ function Today({
           <button className="queue-link" onClick={onMessage}>
             <Send size={14} /> Open client communication queue
           </button>
+          {pendingBookings > 0 && (
+            <button
+              className="queue-link booking-queue-link"
+              onClick={onCalendar}
+            >
+              <Clock3 size={14} /> Review {pendingBookings} online{" "}
+              {pendingBookings === 1 ? "request" : "requests"}
+            </button>
+          )}
           {!remaining && (
             <div className="all-clear">
               <CheckCircle2 />
@@ -534,11 +554,11 @@ function Today({
   );
 }
 const calendarDays = [
-  { day: "WED", date: "22", label: "July 22" },
-  { day: "THU", date: "23", label: "July 23" },
-  { day: "FRI", date: "24", label: "July 24" },
-  { day: "SAT", date: "25", label: "July 25" },
-  { day: "SUN", date: "26", label: "July 26" },
+  { day: "WED", date: "22", label: "July 22", value: "2026-07-22" },
+  { day: "THU", date: "23", label: "July 23", value: "2026-07-23" },
+  { day: "FRI", date: "24", label: "July 24", value: "2026-07-24" },
+  { day: "SAT", date: "25", label: "July 25", value: "2026-07-25" },
+  { day: "SUN", date: "26", label: "July 26", value: "2026-07-26" },
 ];
 const calendarTimes = [
   { time: "9:00", start: 540 },
@@ -573,8 +593,11 @@ function Calendar({ privacy }: { privacy: boolean }) {
     activeServices.find((offering) => offering.id === serviceId) ??
     activeServices[0] ??
     defaultServices[0];
-  const blocks: ScheduleBlock[] =
-    day === 0
+  const [bookingRequests, setBookingRequests] = useSessionState<
+    BookingRequest[]
+  >("booking:requests", []);
+  const baseBlocksForDay = (selectedDay: number): ScheduleBlock[] =>
+    selectedDay === 0
       ? [
           {
             id: "maya",
@@ -601,7 +624,7 @@ function Calendar({ privacy }: { privacy: boolean }) {
             kind: "appointment",
           },
         ]
-      : day === 1
+      : selectedDay === 1
         ? [
             {
               id: "jon",
@@ -620,7 +643,7 @@ function Calendar({ privacy }: { privacy: boolean }) {
               kind: "buffer",
             },
           ]
-        : day === 2
+        : selectedDay === 2
           ? [
               {
                 id: "sam",
@@ -632,6 +655,79 @@ function Calendar({ privacy }: { privacy: boolean }) {
               },
             ]
           : [];
+  const baseBlocks = baseBlocksForDay(day);
+  const confirmedBookingBlocks: ScheduleBlock[] = bookingRequests
+    .filter(
+      (request) =>
+        request.status === "confirmed" &&
+        request.date === calendarDays[day].value &&
+        request.startMinutes !== null,
+    )
+    .map((request) => {
+      const bookedService =
+        services.find((offering) => offering.id === request.serviceId) ??
+        defaultServices[0];
+      return {
+        id: request.id,
+        start: request.startMinutes!,
+        end: request.startMinutes! + serviceWindowMinutes(bookedService),
+        therapist: "Elena",
+        room: "Willow",
+        kind: "appointment" as const,
+      };
+    });
+  const blocks = [...baseBlocks, ...confirmedBookingBlocks];
+  const pendingRequests = bookingRequests.filter(
+    (request) => request.status === "requested",
+  );
+  const requestConflicts = (request: BookingRequest) => {
+    if (request.startMinutes === null) return [];
+    const requestedService =
+      services.find((offering) => offering.id === request.serviceId) ??
+      defaultServices[0];
+    const requestDay = calendarDays.findIndex(
+      (item) => item.value === request.date,
+    );
+    const confirmedOnRequestedDay: ScheduleBlock[] = bookingRequests
+      .filter(
+        (existing) =>
+          existing.status === "confirmed" &&
+          existing.date === request.date &&
+          existing.startMinutes !== null,
+      )
+      .map((existing) => {
+        const existingService =
+          services.find((offering) => offering.id === existing.serviceId) ??
+          defaultServices[0];
+        return {
+          id: existing.id,
+          start: existing.startMinutes!,
+          end: existing.startMinutes! + serviceWindowMinutes(existingService),
+          therapist: "Elena",
+          room: "Willow",
+          kind: "appointment" as const,
+        };
+      });
+    const comparisonBlocks = [
+      ...baseBlocksForDay(requestDay),
+      ...confirmedOnRequestedDay,
+    ];
+    return resourceConflicts(
+      {
+        start: request.startMinutes,
+        end: request.startMinutes + serviceWindowMinutes(requestedService),
+        therapist: "Elena",
+        room: "Willow",
+      },
+      comparisonBlocks,
+    );
+  };
+  const confirmRequest = (request: BookingRequest) => {
+    if (!requestConflicts(request).length)
+      setBookingRequests((current) =>
+        confirmBookingRequest(current, request.id),
+      );
+  };
   const slotState = (start: number) => {
     const conflicts = resourceConflicts(
       { start, end: start + serviceWindowMinutes(service), therapist, room },
@@ -670,6 +766,58 @@ function Calendar({ privacy }: { privacy: boolean }) {
       title="A conflict-safe week"
       copy="Move across the week while therapist, room, appointment, and protected-buffer conflicts are evaluated together."
     >
+      {pendingRequests.length > 0 && (
+        <section className="booking-inbox" aria-label="Online booking requests">
+          <div className="booking-inbox-head">
+            <span>
+              <b>
+                {pendingRequests.length} online{" "}
+                {pendingRequests.length === 1 ? "request" : "requests"}
+              </b>
+              <small>Resource check required before confirmation</small>
+            </span>
+            <span>Needs review</span>
+          </div>
+          {pendingRequests.map((request) => {
+            const requestedService =
+              services.find((offering) => offering.id === request.serviceId) ??
+              defaultServices[0];
+            const conflicts = requestConflicts(request);
+            return (
+              <div className="booking-request" key={request.id}>
+                <span>
+                  <b>{privacy ? "Synthetic client" : request.firstName}</b>
+                  <small>{request.id} · Online request</small>
+                </span>
+                <span>
+                  <b>{requestedService.name}</b>
+                  <small>
+                    {bookingDates.find((date) => date.value === request.date)
+                      ?.label ?? request.date}{" "}
+                    ·{" "}
+                    {request.startMinutes !== null
+                      ? formatBookingTime(request.startMinutes)
+                      : "No time"}
+                  </small>
+                </span>
+                <span
+                  className={
+                    conflicts.length ? "request-conflict" : "request-ready"
+                  }
+                >
+                  {conflicts.length ? "Conflict" : "Available"}
+                </span>
+                <button
+                  disabled={conflicts.length > 0}
+                  onClick={() => confirmRequest(request)}
+                >
+                  {conflicts.length ? "Choose another time" : "Confirm request"}
+                </button>
+              </div>
+            );
+          })}
+        </section>
+      )}
       <section className="week-strip" aria-label="Calendar dates">
         {calendarDays.map((item, index) => (
           <button
